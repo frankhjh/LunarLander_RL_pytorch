@@ -190,7 +190,7 @@ if __name__=='__main__':
         plt.plot(total_rewards)
         plt.title('使用{}作为权值训练的策略网络指导agent的50次模拟测试'.format(weight))
         plt.ylabel('奖励和')
-        plt.savefig('./output/test_result_{}.png'.format(weight))
+        plt.savefig('./tmp/test_result_{}.png'.format(weight))
 
 
 

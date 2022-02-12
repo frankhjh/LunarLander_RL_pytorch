@@ -1,7 +1,10 @@
-import numpy as 
+import numpy as np
 import random
 from collections import namedtuple,deque
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.rcParams['font.family']='sans-serif'
+mpl.rcParams['font.sans-serif']=[u'Microsoft YaHei']
 
 import gym
 from IPython import display
@@ -20,7 +23,7 @@ gamma=0.99 # discount rate
 tau=0.01 # soft update for target network
 lr=5e-4
 update_freq_qlocal=4 # how often to update the network q_local
-update_freq_qtarget=20 # how often to reset the target network q_target
+update_freq_qtarget=200 # how often to reset the target network q_target
 epochs=2000
 max_step=1000 # for one episode, if it does not end within 1000 steps, we stop it by hand.
 
@@ -134,8 +137,23 @@ class Agent(object):
         loss.backward()
         self.opt.step()
     
+    def reward_plot(self,tot_rewards,fin_rewards):
+        fig,axes=plt.subplots(1,2,figsize=(32,8))
+        
+        ax0=axes[0]
+        ax0.plot(tot_rewards)
+        ax0.set_title('Total Rewards Variation during {} Epochs'.format(len(tot_rewards)))
+
+        ax1=axes[1]
+        ax1.plot(fin_rewards)
+        ax1.set_title('Final Rewards Variation during {} Epochs'.format(len(fin_rewards)))
+
+        plt.savefig('./tmp/result_v0.png')
+    
     def train(self):
-        tot_rewards=[]
+        
+        tot_rewards,fin_rewards=[],[]
+        
         for epoch in range(epochs):
             
             cur_state=env.reset()
@@ -164,17 +182,56 @@ class Agent(object):
 
                 
                 if done or episode_step>max_step:
+                    fin_rewards.append(reward)
+                    tot_rewards.append(tot_reward)
                     break
+            
             # eps greedy trick
             if self.eps>self.eps_lb:
                 self.eps*=self.eps_decay_ratio
-            tot_rewards.append(tot_reward)
+            
             print('Epoch:{}  Total Reward:{}'.format(epoch,tot_reward))
         
-        return tot_rewards
+        self.reward_plot(tot_rewards,fin_rewards)
+        return tot_rewards,fin_rewards
     
-    def test(self):
-        pass
+    def test(self,test_round):
+        tot_rewards=[]
+
+        for i in range(test_round):
+            cur_state=env.reset()
+            img=plt.imshow(env.render(mode='rgb_array'))
+            done=False
+
+            tot_reward=0.0
+            while True:
+                action=self.act(cur_state)
+                next_state,reward,done,_=env.step(action)
+
+                tot_reward+=reward
+                cur_state=next_state
+
+                img.set_data(env.render(mode='rgb_array'))
+                display.display(plt.gcf())
+                display.clear_output(wait=True)
+
+                if done:
+                    tot_rewards.append(tot_reward)
+                    break
+        
+        plt.close()
+        plt.plot(tot_rewards)
+        plt.title('{}次模拟测试的奖励情况'.format(test_round))
+        plt.ylabel('奖励和')
+        plt.savefig('./tmp/test_result_v0.png')
+
+if __name__=='__main__':
+    agent=Agent()
+    agent.train()
+    agent.test(50)
+
+
+
 
 
 

@@ -123,7 +123,7 @@ class Agent(object):
         self.opt.zero_grad()
         tot_loss.backward()
         self.opt.step()
-        torch.save(self.policy_nn.state_dict(),'./output2/policy.pkl')
+        torch.save(self.policy_nn.state_dict(),'./tmp2/policy.pkl')
 
         return sum(tot_reward_per_episode)/len(tot_reward_per_episode),sum(final_reward_per_episode)/len(final_reward_per_episode)
     
@@ -139,7 +139,7 @@ class Agent(object):
         ax1.plot(fin_rewards)
         ax1.set_title('Final Rewards Variation during {} Epochs'.format(len(fin_rewards)))
 
-        plt.savefig('./output2/result_v2.png')
+        plt.savefig('./tmp2/result_v2.png')
 
     
     
@@ -158,7 +158,7 @@ class Agent(object):
     
     
     def test(self,test_round):
-        self.policy_nn.load_state_dict(torch.load('./output2/policy.pkl'))
+        self.policy_nn.load_state_dict(torch.load('./tmp2/policy.pkl'))
         self.policy_nn.eval()
         
         tot_rewards=[]
@@ -189,7 +189,7 @@ class Agent(object):
         plt.plot(tot_rewards)
         plt.title('{}次模拟测试的奖励情况'.format(test_round))
         plt.ylabel('奖励和')
-        plt.savefig('./output2/test_result_v2.png')
+        plt.savefig('./tmp2/test_result_v2.png')
 
 
 if __name__=='__main__':

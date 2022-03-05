@@ -23,13 +23,13 @@ gamma=0.99 # discount rate
 tau=0.01 # soft update for target network
 lr=5e-4
 update_freq_qlocal=4 # how often to update the network q_local
-update_freq_qtarget=200 # how often to reset the target network q_target
+update_freq_qtarget=100# how often to reset the target network q_target
 epochs=2000
 max_step=1000 # for one episode, if it does not end within 1000 steps, we stop it by hand.
 
-eps_ub=0.8 # the prob for randomly acting, should decrease during the training process
+eps_ub=0.9 # the prob for randomly acting, should decrease during the training process
 eps_decay_ratio=0.99 # decay ratio of the probability for randomly acting
-eps_lb=1e-2 # the lower bound of the prob of acting randomly
+eps_lb=1e-3 # the lower bound of the prob of acting randomly
 
 def fix_seed(env,seed):
     env.seed(seed)
@@ -49,12 +49,12 @@ in our case, only 4 possible actions [0,1,2,3] exist, thus outputs 4-dim vector
 class Q_Network(nn.Module):
     def __init__(self):
         super(Q_Network,self).__init__()
-        self.fc1=nn.Linear(8,64)
-        self.fc2=nn.Linear(64,64)
+        self.fc1=nn.Linear(8,128)
+        self.fc2=nn.Linear(128,64)
         self.fc3=nn.Linear(64,4)
     
     def forward(self,state):
-        state=torch.from_numpy(state)
+        #state=torch.from_numpy(state)
         x=F.relu(self.fc1(state))
         x=F.relu(self.fc2(x))
         out=self.fc3(x)
@@ -85,7 +85,7 @@ class ReplayBuffer(object):
         next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float()
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float()
 
-        return (states,actions,rewards,next_states,done)
+        return (states,actions,rewards,next_states,dones)
     
     
 class Agent(object):
@@ -157,21 +157,22 @@ class Agent(object):
         for epoch in range(epochs):
             
             cur_state=env.reset()
+            cur_state_cp=torch.from_numpy(cur_state)
             tot_reward=0.0
             
             done=False
             episode_step=0
             while True:
-                action=self.act(cur_state)
+                action=self.act(cur_state_cp)
                 next_state,reward,done,_=env.step(action)
                 
                 #store data into buffer
-                self.buffer.add(cur_state,action,reward,next_state,done)
-                self.update_step1=(self.update_step+1)%update_freq_qlocal
-                self.update_step2=(self.update_step+1)%update_freq_qtarget
+                self.buffer.add(cur_state_cp.numpy(),action,reward,next_state,done)
+                self.update_step1=(episode_step+1)%update_freq_qlocal
+                self.update_step2=(episode_step+1)%update_freq_qtarget
 
                 episode_step+=1
-                cur_state=next_state
+                cur_state_cp=torch.from_numpy(next_state)
                 tot_reward+=reward
 
                 if self.update_step1==0 and len(self.buffer)>=batch_size:
@@ -200,16 +201,17 @@ class Agent(object):
 
         for i in range(test_round):
             cur_state=env.reset()
+            cur_state_cp=torch.from_numpy(cur_state)
             img=plt.imshow(env.render(mode='rgb_array'))
             done=False
 
             tot_reward=0.0
             while True:
-                action=self.act(cur_state)
+                action=self.act(cur_state_cp)
                 next_state,reward,done,_=env.step(action)
 
                 tot_reward+=reward
-                cur_state=next_state
+                cur_state_cp=torch.from_numpy(next_state)
 
                 img.set_data(env.render(mode='rgb_array'))
                 display.display(plt.gcf())
